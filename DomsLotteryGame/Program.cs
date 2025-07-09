@@ -22,12 +22,12 @@ internal class Program
         services.AddSingleton<IPlayerService, PlayerService>();
         services.AddSingleton<ITicketService, TicketService>();
         services.AddSingleton<IPrizeService, PrizeService>();
-        services.AddSingleton<IRandomProvider, RandomProvider>();
-        services.AddSingleton<ILotteryGame, LotteryGame>();
+        services.AddSingleton<IRandomNumberGeneratorService, RandomNumberGeneratorService>();
+        services.AddSingleton<ILotteryGameService, LotteryGameService>();
     })
     .Build();
 
-        var lotteryGame = host.Services.GetRequiredService<ILotteryGame>();
+        var lotteryGame = host.Services.GetRequiredService<ILotteryGameService>();
 
         Console.Write("Enter number of rounds: ");
         int rounds = int.Parse(Console.ReadLine() ?? "1");

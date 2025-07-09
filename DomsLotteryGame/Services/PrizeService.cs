@@ -7,9 +7,9 @@ namespace DomsLotteryGame.Services;
 public class PrizeService : IPrizeService
 {
     private readonly GameSettings _settings;
-    private readonly IRandomProvider _randomProvider;
+    private readonly IRandomNumberGeneratorService _randomProvider;
 
-    public PrizeService(IRandomProvider randomProvider, IOptions<GameSettings> options)
+    public PrizeService(IRandomNumberGeneratorService randomProvider, IOptions<GameSettings> options)
     {
         _randomProvider = randomProvider;
         _settings = options.Value;

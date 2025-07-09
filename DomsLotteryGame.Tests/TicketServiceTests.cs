@@ -1,7 +1,5 @@
-using Xunit;
 using DomsLotteryGame.Services;
 using DomsLotteryGame.Models;
-using System.Collections.Generic;
 
 public class TicketServiceTests
 {

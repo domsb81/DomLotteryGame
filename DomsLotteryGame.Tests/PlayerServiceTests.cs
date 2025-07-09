@@ -19,7 +19,7 @@ public class PlayerServiceTests
             MaxTickets = 50
         });
 
-        var randomMock = new Mock<IRandomProvider>();
+        var randomMock = new Mock<IRandomNumberGeneratorService>();
         randomMock.Setup(r => r.Next(It.IsAny<int>(), It.IsAny<int>())).Returns(2);
 
         var service = new PlayerService(settings, randomMock.Object);

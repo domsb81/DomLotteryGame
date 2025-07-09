@@ -3,14 +3,14 @@ using DomsLotteryGame.Models;
 
 namespace DomsLotteryGame.Services;
 
-public class LotteryGame : ILotteryGame
+public class LotteryGameService : ILotteryGameService
 {
     private readonly IPlayerService _playerService;
     private readonly ITicketService _ticketService;
     private readonly IPrizeService _prizeService;
     private readonly GameStats _gameStats;
 
-    public LotteryGame(IPlayerService playerService, ITicketService ticketService, IPrizeService prizeService)
+    public LotteryGameService(IPlayerService playerService, ITicketService ticketService, IPrizeService prizeService)
     {
         _playerService = playerService;
         _ticketService = ticketService;

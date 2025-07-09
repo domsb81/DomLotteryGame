@@ -1,6 +1,6 @@
 ﻿namespace DomsLotteryGame.Interfaces;
 
-public interface ILotteryGame
+public interface ILotteryGameService
 {
     void RunGame(int rounds);
 }

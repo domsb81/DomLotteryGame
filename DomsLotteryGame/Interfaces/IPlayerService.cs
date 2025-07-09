@@ -1,10 +1,8 @@
 ﻿using DomsLotteryGame.Models;
-using DomsLotteryGame.Models;
 
-namespace DomsLotteryGame.Interfaces
+namespace DomsLotteryGame.Interfaces;
+
+public interface IPlayerService
 {
-    public interface IPlayerService
-    {
-        List<Player> GeneratePlayers(int userTickets);
-    }
+    List<Player> GeneratePlayers(int userTickets);
 }
