@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.11.35208.52
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DomsLotteryGame", "DomsLotteryGame\DomsLotteryGame.csproj", "{88AA160C-70DA-4057-A2B5-4B7BB1942DDA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DomsLotteryGame.Tests", "DomsLotteryGame.Tests\DomsLotteryGame.Tests.csproj", "{11AE383D-512A-4622-89E6-BB999DF18144}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{88AA160C-70DA-4057-A2B5-4B7BB1942DDA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{88AA160C-70DA-4057-A2B5-4B7BB1942DDA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{88AA160C-70DA-4057-A2B5-4B7BB1942DDA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{88AA160C-70DA-4057-A2B5-4B7BB1942DDA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{11AE383D-512A-4622-89E6-BB999DF18144}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{11AE383D-512A-4622-89E6-BB999DF18144}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{11AE383D-512A-4622-89E6-BB999DF18144}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{11AE383D-512A-4622-89E6-BB999DF18144}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {FDEEB42B-43FB-46CF-901D-37193B354240}
+	EndGlobalSection
+EndGlobal
