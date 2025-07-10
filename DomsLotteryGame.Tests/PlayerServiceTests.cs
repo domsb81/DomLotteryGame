@@ -23,9 +23,9 @@ public class PlayerServiceTests
         randomMock.Setup(r => r.Next(It.IsAny<int>(), It.IsAny<int>())).Returns(2);
 
         var service = new PlayerService(settings, randomMock.Object);
-        var players = service.GeneratePlayers(10);
+        var players = service.GeneratePlayers(3);
 
-        Assert.True(players.Count == 10);
+        Assert.True(players.Count == 3);
         Assert.Equal("Player 1", players[0].Name);
     }
 }

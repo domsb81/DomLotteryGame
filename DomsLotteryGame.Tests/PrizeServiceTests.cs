@@ -1,51 +1,99 @@
-//using Microsoft.Extensions.Options;
-//using Moq;
-//using DomsLotteryGame.Interfaces;
-//using DomsLotteryGame.Models;
-//using DomsLotteryGame.Services;
+using Moq;
+using Microsoft.Extensions.Options;
+using DomsLotteryGame.Models;
+using DomsLotteryGame.Services;
+using DomsLotteryGame.Interfaces;
 
-//public class PrizeServiceTests
-//{
-//    [Fact]
-//    public void DistributePrizes_ShouldReturnGroupedWinnersAndHouseProfit()
-//    {
-//        // Arrange
-//        var settings = Options.Create(new GameSettings
-//        {
-//            TicketCost = 1,
-//            GrandPrizePercentage = 0.5,
-//            SecondTierPercentage = 0.3,
-//            ThirdTierPercentage = 0.1,
-//            SecondTierWinnerRatio = 0.1,
-//            ThirdTierWinnerRatio = 0.2
-//        });
+namespace DomsLotteryGame.Tests.Services
+{
+    public class PrizeServiceTests
+    {
+        private PrizeService CreateService(GameSettings settings, Queue<int> randomSequence)
+        {
+            var mockOptions = new Mock<IOptions<GameSettings>>();
+            mockOptions.Setup(o => o.Value).Returns(settings);
 
-//        var randomMock = new Mock<IRandomProvider>();
-//        randomMock.Setup(r => r.PickRandom(It.IsAny<List<int>>())).Returns((List<int> list) => list[0]);
-//        randomMock.Setup(r => r.Shuffle(It.IsAny<List<int>>())).Returns((List<int> list) => list);
+            var mockRandom = new Mock<IRandomNumberGeneratorService>();
+            mockRandom.Setup(r => r.Next(It.IsAny<int>(), It.IsAny<int>()))
+                      .Returns(() => randomSequence.Dequeue());
 
-//        var prizeService = new PrizeService(settings, randomMock.Object);
+            return new PrizeService(mockOptions.Object, mockRandom.Object);
+        }
 
-//        var players = new List<Player>
-//        {
-//            new Player { Name = "Alice", Tickets = new List<int> { 1, 2 } },
-//            new Player { Name = "Bob", Tickets = new List<int> { 3, 4 } },
-//            new Player { Name = "Charlie", Tickets = new List<int> { 5, 6 } }
-//        };
+        [Fact]
+        public void DistributePrizes_ShouldDistributeCorrectly_WithNormalInput()
+        {
+            var settings = new GameSettings
+            {
+                TicketCost = 10,
+                GrandPrizePercentage = 0.5m,
+                SecondTierPercentage = 0.2m,
+                SecondPrizePoolPercentage = 0.3m,
+                ThirdTierPercentage = 0.3m,
+                ThirdPrizePoolPercentage = 0.2m
+            };
 
-//        var ticketMap = players.SelectMany(p => p.Tickets.Select(t => new { Ticket = t, Player = p }))
-//                               .ToDictionary(x => x.Ticket, x => x.Player);
+            var ticketMap = new Dictionary<int, string>
+            {
+                { 0, "Player0" },
+                { 1, "Player1" },
+                { 2, "Player2" },
+                { 3, "Player1" },
+                { 4, "Player2" },
+                { 5, "Player1" },
+                { 6, "Player2" },
+                { 7, "Player0" },
+                { 8, "Player1" },
+                { 9, "Player2" }
+            };
 
-//        // Act
-//        var result = prizeService.DistributePrizes(ticketMap);
+            var randomSequence = new Queue<int>(new[] { 0, 4, 1, 2, 3 });
+            var service = CreateService(settings, randomSequence);
 
-//        // Assert
-//        Assert.NotNull(result);
-//        Assert.True(result.GroupedWinners.Count > 0);
-//        Assert.True(result.HouseProfit >= 0);
+            var result = service.DistributePrizes(ticketMap);
 
-//        int totalPrizeDistributed = result.GroupedWinners.Sum(g => g.Key * g.Value.Count);
-//        int expectedRevenue = ticketMap.Count * settings.Value.TicketCost;
-//        Assert.Equal(expectedRevenue - result.HouseProfit, totalPrizeDistributed);
-//    }
-//}
+            Assert.Equal(2, result.WinnersByTier.Count);
+            Assert.True(result.TotalPrizeMoney > 0);
+            Assert.True(result.HouseProfit >= 0);
+        }
+
+        [Fact]
+        public void DistributePrizes_ShouldThrowException_WhenTicketMapIsEmpty()
+        {
+            var settings = new GameSettings { TicketCost = 10 };
+            var ticketMap = new Dictionary<int, string>();
+            var randomSequence = new Queue<int>();
+            var service = CreateService(settings, randomSequence);
+
+            Assert.Throws<InvalidOperationException>(() => service.DistributePrizes(ticketMap));
+        }
+
+        [Fact]
+        public void DistributePrizes_ShouldHandleSingleTicket()
+        {
+            var settings = new GameSettings
+            {
+                TicketCost = 10,
+                GrandPrizePercentage = 0.5m,
+                SecondTierPercentage = 0.2m,
+                SecondPrizePoolPercentage = 0.3m,
+                ThirdTierPercentage = 0.3m,
+                ThirdPrizePoolPercentage = 0.2m
+            };
+
+            var ticketMap = new Dictionary<int, string>
+            {
+                { 0, "SoloPlayer" }
+            };
+
+            var randomSequence = new Queue<int>(new[] { 0 });
+            var service = CreateService(settings, randomSequence);
+
+            var result = service.DistributePrizes(ticketMap);
+
+            Assert.Single(result.WinnersByTier);
+            Assert.Contains(PrizeTier.Grand, result.WinnersByTier.Keys);
+            Assert.Equal(5.0m, result.WinnersByTier[PrizeTier.Grand][0].Item2);
+        }
+    }
+}
