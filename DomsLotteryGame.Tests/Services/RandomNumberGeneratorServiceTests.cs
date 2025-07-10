@@ -1,8 +1,6 @@
-using Xunit;
 using DomsLotteryGame.Services;
-using System.Collections.Generic;
 
-public class RandomProviderTests
+public class RandomNumberGeneratorServiceTests
 {
     [Fact]
     public void Next_ShouldReturnWithinRange()
