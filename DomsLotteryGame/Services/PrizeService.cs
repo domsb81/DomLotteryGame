@@ -18,62 +18,66 @@ public class PrizeService : IPrizeService
     public PrizeDistributionResult DistributePrizes(Dictionary<int, string> ticketMap)
     {
         var result = new PrizeDistributionResult();
-        int totalTickets = ticketMap.Count;
-        decimal totalRevenue = totalTickets * _settings.TicketCost;
+        var totalTickets = ticketMap.Count;
+        var totalRevenue = totalTickets * _settings.TicketCost;
 
-        decimal grandPrizeAmount = totalRevenue * _settings.GrandPrizePercentage;
-        decimal secondTierTotal = totalRevenue * _settings.SecondTierPercentage;
-        decimal thirdTierTotal = totalRevenue * _settings.ThirdTierPercentage;
+        var availableTickets = ShuffleTickets(ticketMap.Keys.ToList());
 
-        int secondTierCount = (int)Math.Round(totalTickets * 0.10);
-        int thirdTierCount = (int)Math.Round(totalTickets * 0.20);
+        result.TotalPrizeMoney += AwardGrandPrize(result, ticketMap, availableTickets, totalRevenue);
+        result.TotalPrizeMoney += AwardTierPrize(result, ticketMap, availableTickets, totalRevenue, _settings.SecondTierPercentage, _settings.SecondTierWinnerRatio);
+        result.TotalPrizeMoney += AwardTierPrize(result, ticketMap, availableTickets, totalRevenue, _settings.ThirdTierPercentage, _settings.ThirdTierWinnerRatio);
 
-        var availableTickets = ticketMap.Keys.OrderBy(_ => _randomProvider.Next(0, 10000)).ToList();
-        decimal houseProfitRemainder = 0;
-
-        // Grand Prize
-        if (availableTickets.Count > 0)
-        {
-            int grandTicket = availableTickets[0];
-            result.GroupedWinners[grandPrizeAmount] = new List<string> { ticketMap[grandTicket] };
-            result.TotalPrizeMoney += grandPrizeAmount;
-            availableTickets.RemoveAt(0);
-        }
-
-        // Second Tier
-        var secondTierWinners = new List<string>();
-        decimal secondTierPrize = secondTierCount > 0 ? Math.Floor(secondTierTotal / secondTierCount * 100) / 100 : 0;
-        decimal secondTierRemainder = secondTierTotal - (secondTierPrize * secondTierCount);
-        houseProfitRemainder += secondTierRemainder;
-
-        for (int i = 0; i < secondTierCount && availableTickets.Count > 0; i++)
-        {
-            secondTierWinners.Add(ticketMap[availableTickets[0]]);
-            result.TotalPrizeMoney += secondTierPrize;
-            availableTickets.RemoveAt(0);
-        }
-
-        if (secondTierWinners.Count > 0)
-            result.GroupedWinners[secondTierPrize] = secondTierWinners;
-
-        // Third Tier
-        var thirdTierWinners = new List<string>();
-        decimal thirdTierPrize = thirdTierCount > 0 ? Math.Floor(thirdTierTotal / thirdTierCount * 100) / 100 : 0;
-        decimal thirdTierRemainder = thirdTierTotal - (thirdTierPrize * thirdTierCount);
-        houseProfitRemainder += thirdTierRemainder;
-
-        for (int i = 0; i < thirdTierCount && availableTickets.Count > 0; i++)
-        {
-            thirdTierWinners.Add(ticketMap[availableTickets[0]]);
-            result.TotalPrizeMoney += thirdTierPrize;
-            availableTickets.RemoveAt(0);
-        }
-
-        if (thirdTierWinners.Count > 0)
-            result.GroupedWinners[thirdTierPrize] = thirdTierWinners;
-
-        result.HouseProfit = totalRevenue - result.TotalPrizeMoney + houseProfitRemainder;
+        result.HouseProfit = totalRevenue - result.TotalPrizeMoney;
 
         return result;
+    }
+
+    private List<int> ShuffleTickets(List<int> ticketIds) =>
+        ticketIds.OrderBy(_ => _randomProvider.Next(0, 10000)).ToList();
+
+    private int CalculateWinnerCount(int totalTickets, decimal ratio) =>
+        (int)Math.Round(totalTickets * ratio);
+
+    private decimal AwardGrandPrize(PrizeDistributionResult result, Dictionary<int, string> ticketMap, List<int> availableTickets, decimal totalRevenue)
+    {
+        if (availableTickets.Count == 0) return 0;
+
+        var prizeAmount = totalRevenue * _settings.GrandPrizePercentage;
+        var winnerTicket = availableTickets[0];
+
+        result.GroupedWinners[prizeAmount] = new List<string> { ticketMap[winnerTicket] };
+        availableTickets.RemoveAt(0);
+
+        return prizeAmount;
+    }
+
+    private decimal AwardTierPrize(
+        PrizeDistributionResult result,
+        Dictionary<int, string> ticketMap,
+        List<int> availableTickets,
+        decimal totalRevenue,
+        decimal tierPercentage,
+        decimal winnerRatio)
+    {
+        var totalTierAmount = totalRevenue * tierPercentage;
+        var winnerCount = CalculateWinnerCount(ticketMap.Count, winnerRatio);
+
+        if (winnerCount == 0 || availableTickets.Count == 0) return 0;
+
+        var individualPrize = Math.Floor(totalTierAmount / winnerCount * 100) / 100;
+        var distributedAmount = 0m;
+        var winners = new List<string>();
+
+        for (int i = 0; i < winnerCount && availableTickets.Count > 0; i++)
+        {
+            winners.Add(ticketMap[availableTickets[0]]);
+            distributedAmount += individualPrize;
+            availableTickets.RemoveAt(0);
+        }
+
+        if (winners.Count > 0)
+            result.GroupedWinners[individualPrize] = winners;
+
+        return distributedAmount;
     }
 }
