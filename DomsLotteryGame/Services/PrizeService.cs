@@ -103,6 +103,9 @@ public class PrizeService : IPrizeService
 
         return pool[index];
     }
+        int index = _random.Next(0, pool.Count);
+        return pool[index];
+    }
 
     private void AddWinner(PrizeResult result, PrizeTier tier, decimal prize, string name)
     {
