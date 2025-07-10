@@ -48,13 +48,13 @@ public class LotteryGameService : ILotteryGameService
 
         var result = _prizeService.DistributePrizes(ticketMap);
 
-        Console.WriteLine("\nWinners Grouped by Prize Amount:");
-        foreach (var group in result.GroupedWinners.OrderByDescending(g => g.Key))
+        Console.WriteLine("\nWinners Grouped by Prize Tier:");
+        foreach (var tier in result.WinnersByTier.OrderBy(t => t.Key))
         {
-            Console.WriteLine($"\n£{group.Key}");
-            foreach (var name in group.Value.Distinct())
+            Console.WriteLine($"\n{tier.Key} Prize Winners:");
+            foreach (var (name, prize) in tier.Value.Distinct())
             {
-                Console.WriteLine($"- {name}");
+                Console.WriteLine($"- {name} won £{prize:F2}");
             }
         }
 

@@ -3,5 +3,5 @@ namespace DomsLotteryGame.Interfaces;
 
 public interface IPrizeService
 {
-    PrizeDistributionResult DistributePrizes(Dictionary<int, string> ticketMap);
+    PrizeResult DistributePrizes(Dictionary<int, string> ticketMap);
 }
