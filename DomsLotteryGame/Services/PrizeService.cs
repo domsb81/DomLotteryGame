@@ -7,77 +7,101 @@ namespace DomsLotteryGame.Services;
 public class PrizeService : IPrizeService
 {
     private readonly GameSettings _settings;
-    private readonly IRandomNumberGeneratorService _randomProvider;
+    private readonly IRandomNumberGeneratorService _random;
 
-    public PrizeService(IRandomNumberGeneratorService randomProvider, IOptions<GameSettings> options)
+    public PrizeService(IOptions<GameSettings> options, IRandomNumberGeneratorService random)
     {
-        _randomProvider = randomProvider;
         _settings = options.Value;
+        _random = random;
     }
 
-    public PrizeDistributionResult DistributePrizes(Dictionary<int, string> ticketMap)
+    public PrizeResult DistributePrizes(Dictionary<int, string> ticketMap)
     {
-        var result = new PrizeDistributionResult();
-        var totalTickets = ticketMap.Count;
-        var totalRevenue = totalTickets * _settings.TicketCost;
+        if (ticketMap == null || ticketMap.Count == 0)
+            throw new InvalidOperationException("No tickets available for prize distribution.");
 
-        var availableTickets = ShuffleTickets(ticketMap.Keys.ToList());
+        var result = new PrizeResult();
+        var allTickets = new List<int>(ticketMap.Keys);
+        var usedTickets = new HashSet<int>();
+        var playerWinners = new HashSet<string>();
+        decimal totalRevenue = ticketMap.Count * _settings.TicketCost;
 
-        result.TotalPrizeMoney += AwardGrandPrize(result, ticketMap, availableTickets, totalRevenue);
-        result.TotalPrizeMoney += AwardTierPrize(result, ticketMap, availableTickets, totalRevenue, _settings.SecondTierPercentage, _settings.SecondTierWinnerRatio);
-        result.TotalPrizeMoney += AwardTierPrize(result, ticketMap, availableTickets, totalRevenue, _settings.ThirdTierPercentage, _settings.ThirdTierWinnerRatio);
+        // Grand Prize
+        var grandPool = allTickets.Except(usedTickets).ToList();
+        if (grandPool.Count > 0)
+        {
+            int grandWinner = DrawTicket(grandPool);
+            decimal grandPrize = Math.Floor(totalRevenue * _settings.GrandPrizePercentage * 100) / 100;
+            string player = ticketMap[grandWinner];
+            AddWinner(result, PrizeTier.Grand, grandPrize, player);
+            usedTickets.Add(grandWinner);
+            playerWinners.Add(player);
+        }
 
-        result.HouseProfit = totalRevenue - result.TotalPrizeMoney;
+        // Second Tier
+        int secondCount = (int)Math.Round(ticketMap.Count * _settings.SecondTierPercentage);
+        decimal secondPrizePool = totalRevenue * _settings.SecondPrizePoolPercentage;
+        var secondPool = allTickets
+            .Where(t => !usedTickets.Contains(t) && !playerWinners.Contains(ticketMap[t]))
+            .ToList();
+        DistributeTier(result, PrizeTier.Second, secondCount, secondPrizePool, secondPool, usedTickets, playerWinners, ticketMap);
 
+        // Third Tier
+        int thirdCount = (int)Math.Round(ticketMap.Count * _settings.ThirdTierPercentage);
+        decimal thirdPrizePool = totalRevenue * _settings.ThirdPrizePoolPercentage;
+        var thirdPool = allTickets
+            .Where(t => !usedTickets.Contains(t) && !playerWinners.Contains(ticketMap[t]))
+            .ToList();
+        DistributeTier(result, PrizeTier.Third, thirdCount, thirdPrizePool, thirdPool, usedTickets, playerWinners, ticketMap);
+
+        result.TotalPrizeMoney = result.WinnersByTier
+            .SelectMany(kvp => kvp.Value)
+            .Sum(entry => entry.Prize);
+
+        result.HouseProfit = Math.Round(totalRevenue - result.TotalPrizeMoney, 2);
         return result;
     }
 
-    private List<int> ShuffleTickets(List<int> ticketIds) =>
-        ticketIds.OrderBy(_ => _randomProvider.Next(0, 10000)).ToList();
-
-    private int CalculateWinnerCount(int totalTickets, decimal ratio) =>
-        (int)Math.Round(totalTickets * ratio);
-
-    private decimal AwardGrandPrize(PrizeDistributionResult result, Dictionary<int, string> ticketMap, List<int> availableTickets, decimal totalRevenue)
+    private void DistributeTier(
+        PrizeResult result,
+        PrizeTier tier,
+        int count,
+        decimal pool,
+        List<int> eligible,
+        HashSet<int> used,
+        HashSet<string> playerWinners,
+        Dictionary<int, string> map)
     {
-        if (availableTickets.Count == 0) return 0;
+        if (count == 0 || eligible.Count == 0) return;
 
-        var prizeAmount = totalRevenue * _settings.GrandPrizePercentage;
-        var winnerTicket = availableTickets[0];
+        int actualCount = Math.Min(count, eligible.Count);
+        decimal prize = Math.Floor(pool / actualCount * 100) / 100;
 
-        result.GroupedWinners[prizeAmount] = new List<string> { ticketMap[winnerTicket] };
-        availableTickets.RemoveAt(0);
-
-        return prizeAmount;
+        for (int i = 0; i < actualCount && eligible.Count > 0; i++)
+        {
+            int winner = DrawTicket(eligible);
+            string player = map[winner];
+            AddWinner(result, tier, prize, player);
+            used.Add(winner);
+            playerWinners.Add(player);
+            eligible.Remove(winner);
+        }
     }
 
-    private decimal AwardTierPrize(
-        PrizeDistributionResult result,
-        Dictionary<int, string> ticketMap,
-        List<int> availableTickets,
-        decimal totalRevenue,
-        decimal tierPercentage,
-        decimal winnerRatio)
+    private int DrawTicket(List<int> pool)
     {
-        var totalTierAmount = totalRevenue * tierPercentage;
-        var winnerCount = CalculateWinnerCount(ticketMap.Count, winnerRatio);
+        if (pool == null || pool.Count == 0)
+            throw new InvalidOperationException("Cannot draw from an empty ticket pool.");
 
-        if (winnerCount == 0 || availableTickets.Count == 0) return 0;
+        int index = _random.Next(0, pool.Count);
+        return pool[index];
+    }
 
-        var individualPrize = Math.Floor(totalTierAmount / winnerCount * 100) / 100;
-        var distributedAmount = 0m;
-        var winners = new List<string>();
+    private void AddWinner(PrizeResult result, PrizeTier tier, decimal prize, string name)
+    {
+        if (!result.WinnersByTier.ContainsKey(tier))
+            result.WinnersByTier[tier] = new List<(string, decimal)>();
 
-        for (int i = 0; i < winnerCount && availableTickets.Count > 0; i++)
-        {
-            winners.Add(ticketMap[availableTickets[0]]);
-            distributedAmount += individualPrize;
-            availableTickets.RemoveAt(0);
-        }
-
-        if (winners.Count > 0)
-            result.GroupedWinners[individualPrize] = winners;
-
-        return distributedAmount;
+        result.WinnersByTier[tier].Add((name, prize));
     }
 }
